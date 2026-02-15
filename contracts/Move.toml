@@ -1,0 +1,16 @@
+[package]
+name = "shelbylink_v2"
+version = "1.0.0"
+authors = []
+
+[addresses]
+shelbylink = "0x124992510e07b1bc4a9ad7bfc7bb87381d2e473c1b30c01d11c96640f8582cb9"
+
+[dev-addresses]
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "devnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]
