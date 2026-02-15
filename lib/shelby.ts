@@ -1,46 +1,50 @@
-import { ShelbyClient } from "@shelby-protocol/sdk/browser";
+import {
+    ShelbyClient,
+} from "@shelby-protocol/sdk/browser";
+import { AccountAddress } from "@aptos-labs/ts-sdk";
 
 // Initialize client if API key is present
 const API_KEY = process.env.NEXT_PUBLIC_SHELBY_API_KEY;
 
-// Mock data store for demo purposes (in-memory, resets on reload)
-// In a real app, this would be IPFS or permanent storage
+// Mock data store for demo purposes
 const mockStorage: Record<string, Blob> = {};
 
-export const uploadFileToShelby = async (file: File): Promise<string> => {
-    if (API_KEY) {
-        try {
-            const client = new ShelbyClient({ apiKey: API_KEY });
-            const cid = await client.upload(file);
-            return cid;
-        } catch (error) {
-            console.error("Shelby SDK Upload Error:", error);
-            throw new Error("Failed to upload to Shelby Protocol");
-        }
-    } else {
-        console.warn("Shelby API Key not found. Using Mock Implementation.");
-        // Simulate upload delay
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        const cid = "QmMock" + Math.random().toString(36).substring(7);
-        mockStorage[cid] = file;
-        return cid;
-    }
+// Helper to get client
+const getClient = () => {
+    if (!API_KEY) throw new Error("Shelby API Key not found");
+    return new ShelbyClient({
+        apiKey: API_KEY,
+        network: "SHELBYNET" as any, // Cast to avoid enum issues for now
+        rpc: {
+            baseUrl: "https://api.shelbynet.shelby.xyz/shelby",
+        },
+    });
 };
 
 export const getFileFromShelby = async (cid: string): Promise<Blob | null> => {
     if (API_KEY) {
         try {
-            const client = new ShelbyClient({ apiKey: API_KEY });
-            // Assuming SDK has a download/get method returning Blob or similar
-            const file = await client.download(cid);
-            return file;
+            const client = getClient();
+
+            // Parse CID: address/blobName
+            const parts = cid.split('/');
+            if (parts.length < 2) throw new Error("Invalid CID format. Expected address/blobName");
+
+            const account = parts[0];
+            const blobName = parts.slice(1).join('/');
+
+            const blob = await client.download({
+                account: AccountAddress.fromString(account),
+                blobName: blobName,
+            });
+            // Convert ReadableStream to Blob
+            return new Response(blob.readable).blob();
         } catch (error) {
             console.error("Shelby SDK Download Error:", error);
             return null;
         }
     } else {
         console.warn("Shelby API Key not found. Using Mock Implementation.");
-        // Simulate network delay
         await new Promise((resolve) => setTimeout(resolve, 1000));
         return mockStorage[cid] || null;
     }
